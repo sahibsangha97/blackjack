@@ -19,11 +19,14 @@ html,body{height:100%;}
 body{
   margin:0;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;
-  background:radial-gradient(900px 600px at 50% 100%,rgba(0,200,255,.10),transparent 55%),var(--bg);
+  background:
+    radial-gradient(900px 600px at 50% 100%,rgba(0,200,255,.10),transparent 55%),
+    var(--bg);
   overflow:hidden;
   color:white;
 }
 
+/* Confetti canvas */
 #confetti{
   position:fixed;
   inset:0;
@@ -35,8 +38,10 @@ body{
   height:100%;
   display:grid;
   place-items:center;
+  padding: 12px;
 }
 
+/* POV table */
 .table{
   width:min(1100px,98vw);
   aspect-ratio:16/10;
@@ -52,14 +57,45 @@ body{
   perspective:1100px;
 }
 
+/* Wood-ish rail */
 .rail{
   position:absolute;
   inset:10px;
   border-radius:999px;
   border:10px solid rgba(84,42,18,.55);
   box-shadow:inset 0 0 0 2px rgba(255,255,255,.08);
+  z-index: 1;
 }
 
+/* Subtle photo “polaroids” around the edge */
+.memories{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index: 2;
+}
+.memory{
+  position:absolute;
+  width: 180px;
+  aspect-ratio: 3/4;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 18px 45px rgba(0,0,0,.35);
+  border: 3px solid rgba(255,255,255,.75);
+  filter: saturate(1.02) contrast(1.02);
+  opacity: 0.92;
+}
+
+/* place them so it feels spaced + not clustered */
+.m1{ left: 7%; top: 14%; transform: rotate(-10deg); }
+.m2{ right: 7%; top: 14%; transform: rotate(9deg); }
+.m3{ left: 10%; bottom: 14%; transform: rotate(7deg); opacity:0.86; }
+.m4{ right: 10%; bottom: 14%; transform: rotate(-8deg); opacity:0.86; }
+
+/* Fade them slightly into the table vibe */
+.memory::after{ content:""; }
+
+/* Hands */
 .zone{
   position:absolute;
   left:10%;
@@ -68,18 +104,16 @@ body{
   flex-direction:column;
   align-items:center;
   gap:8px;
+  z-index: 3;
 }
-
 .zone.dealer{
   top:18%;
   transform:translateZ(-90px) scale(.92);
 }
-
 .zone.player{
   bottom:20%;
   transform:translateZ(90px) scale(1.05);
 }
-
 .hand{
   display:flex;
   gap:12px;
@@ -87,6 +121,7 @@ body{
   align-items:center;
 }
 
+/* Cards */
 .card{
   width:110px;
   height:150px;
@@ -100,8 +135,47 @@ body{
   align-items:center;
   font-weight:900;
   font-size:18px;
+  overflow:hidden;
 }
 
+.corner{
+  position:absolute;
+  top:10px; left:10px;
+  font-weight:1000;
+  font-size:13px;
+  color:#dc2626;
+}
+.corner.br{
+  top:auto; left:auto;
+  bottom:10px; right:10px;
+  transform: rotate(180deg);
+  color:#dc2626;
+}
+
+.centerWrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+}
+
+.portrait{
+  width:74px;
+  height:74px;
+  border-radius:999px;
+  object-fit:cover;
+  border:3px solid rgba(220,38,38,.85);
+  box-shadow: 0 14px 30px rgba(0,0,0,.25);
+}
+
+.suit{
+  font-size:18px;
+  line-height:1;
+  margin-top:2px;
+  color:#dc2626;
+}
+
+/* Controls */
 .controls{
   position:absolute;
   left:50%;
@@ -109,8 +183,8 @@ body{
   bottom:6%;
   display:flex;
   gap:10px;
+  z-index: 4;
 }
-
 button{
   border:0;
   padding:12px 14px;
@@ -120,8 +194,8 @@ button{
   background:rgba(255,255,255,.10);
   color:white;
   border:1px solid rgba(255,255,255,.14);
+  -webkit-tap-highlight-color: transparent;
 }
-
 button.primary{background:rgba(251,191,36,.18);}
 button.danger{background:rgba(220,38,38,.16);}
 button:disabled{opacity:.45;cursor:not-allowed;}
@@ -133,17 +207,33 @@ button:disabled{opacity:.45;cursor:not-allowed;}
   bottom:16%;
   font-weight:900;
   text-align:center;
+  z-index: 4;
+  width: min(90%, 760px);
+}
+
+/* Mobile: prevent clutter by hiding 2 photos */
+@media (max-width: 720px){
+  .table{ aspect-ratio: 10/14; }
+  .memory{ width: 145px; }
+  .m3, .m4{ display:none; }
 }
 </style>
 </head>
 
 <body>
-
 <canvas id="confetti"></canvas>
 
 <div class="wrap">
   <div class="table">
     <div class="rail"></div>
+
+    <!-- Photos around the table (upload these 4 files to repo root) -->
+    <div class="memories">
+      <img class="memory m1" src="memory1.jpg" alt="memory 1" />
+      <img class="memory m2" src="memory2.jpg" alt="memory 2" />
+      <img class="memory m3" src="memory3.jpg" alt="memory 3" />
+      <img class="memory m4" src="memory4.jpg" alt="memory 4" />
+    </div>
 
     <div class="zone dealer">
       <div class="hand" id="dealerHand"></div>
@@ -165,67 +255,124 @@ button:disabled{opacity:.45;cursor:not-allowed;}
 </div>
 
 <script>
-const DEALER_STAND_CARD_TEXT="I hate you, Diya :)";
-const hitSequence=["Be","My","Valentine?"];
+const DEALER_STAND_CARD_TEXT = "I hate you, Diya :)";
+const hitSequence = ["Be","My","Valentine?"];
 
-const dealerHand=document.getElementById("dealerHand");
-const playerHand=document.getElementById("playerHand");
-const dealBtn=document.getElementById("dealBtn");
-const hitBtn=document.getElementById("hitBtn");
-const standBtn=document.getElementById("standBtn");
-const resetBtn=document.getElementById("resetBtn");
-const toast=document.getElementById("toast");
+const dealerHand = document.getElementById("dealerHand");
+const playerHand = document.getElementById("playerHand");
+const dealBtn = document.getElementById("dealBtn");
+const hitBtn = document.getElementById("hitBtn");
+const standBtn = document.getElementById("standBtn");
+const resetBtn = document.getElementById("resetBtn");
+const toast = document.getElementById("toast");
 
 let gameStarted=false;
 let hitIndex=0;
 
+// subtle deal sound (WebAudio)
 let audioCtx=null;
-function sound(){
+function ensureAudio(){
   if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  const t=audioCtx.currentTime;
-  const osc=audioCtx.createOscillator();
-  const gain=audioCtx.createGain();
-  osc.type="triangle";
-  osc.frequency.setValueAtTime(200,t);
-  gain.gain.setValueAtTime(0.05,t);
-  gain.gain.exponentialRampToValueAtTime(0.0001,t+.08);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start(t);
-  osc.stop(t+.08);
+  if(audioCtx.state==="suspended") audioCtx.resume();
+}
+function dealSound(){
+  try{
+    ensureAudio();
+    const t=audioCtx.currentTime;
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.type="triangle";
+    osc.frequency.setValueAtTime(210,t);
+    gain.gain.setValueAtTime(0.05,t);
+    gain.gain.exponentialRampToValueAtTime(0.0001,t+.08);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t+.08);
+  }catch(e){}
 }
 
-function card(text){
+function cardText(text){
   const c=document.createElement("div");
   c.className="card";
   c.textContent=text;
   return c;
 }
 
+// Queen of Hearts with her face (upload diya_queen.png in repo root)
+function queenOfHeartsWithPortrait(imgSrc){
+  const c=document.createElement("div");
+  c.className="card";
+
+  const tl=document.createElement("div");
+  tl.className="corner";
+  tl.textContent="Q♥";
+
+  const br=document.createElement("div");
+  br.className="corner br";
+  br.textContent="Q♥";
+
+  const wrap=document.createElement("div");
+  wrap.className="centerWrap";
+
+  const img=document.createElement("img");
+  img.className="portrait";
+  img.src=imgSrc;
+  img.alt="Queen";
+
+  const suit=document.createElement("div");
+  suit.className="suit";
+  suit.textContent="♥";
+
+  wrap.appendChild(img);
+  wrap.appendChild(suit);
+
+  c.appendChild(tl);
+  c.appendChild(br);
+  c.appendChild(wrap);
+
+  return c;
+}
+
 function deal(){
   if(gameStarted) return;
   gameStarted=true;
-  playerHand.appendChild(card("Will")); sound();
-  playerHand.appendChild(card("You")); sound();
-  dealerHand.appendChild(card("Q♥")); sound();
+  hitIndex=0;
+
+  ensureAudio();
+  dealerHand.innerHTML="";
+  playerHand.innerHTML="";
+  toast.textContent="";
+
+  playerHand.appendChild(cardText("Will")); dealSound();
+  playerHand.appendChild(cardText("You"));  dealSound();
+
+  dealerHand.appendChild(queenOfHeartsWithPortrait("diya_queen.png")); dealSound();
+
   dealBtn.disabled=true;
   hitBtn.disabled=false;
   standBtn.disabled=false;
-  toast.textContent="";
 }
 
 function hit(){
+  if(!gameStarted) return;
   if(hitIndex>=hitSequence.length) return;
+
   const word=hitSequence[hitIndex];
-  playerHand.appendChild(card(word));
-  sound();
-  if(word==="Valentine?") confetti();
+  playerHand.appendChild(cardText(word));
+  dealSound();
+
+  if(word==="Valentine?"){
+    confetti();
+  }
+
   hitIndex++;
   if(hitIndex===hitSequence.length) hitBtn.disabled=true;
 }
 
 function stand(){
-  dealerHand.appendChild(card(DEALER_STAND_CARD_TEXT));
-  sound();
+  if(!gameStarted) return;
+  dealerHand.appendChild(cardText(DEALER_STAND_CARD_TEXT));
+  dealSound();
   hitBtn.disabled=true;
   standBtn.disabled=true;
 }
@@ -233,6 +380,7 @@ function stand(){
 function reset(){
   dealerHand.innerHTML="";
   playerHand.innerHTML="";
+  toast.textContent="";
   hitIndex=0;
   gameStarted=false;
   dealBtn.disabled=false;
@@ -245,29 +393,35 @@ hitBtn.onclick=hit;
 standBtn.onclick=stand;
 resetBtn.onclick=reset;
 
-/* Confetti */
+// confetti
 const canvas=document.getElementById("confetti");
 const ctx=canvas.getContext("2d");
 function resize(){canvas.width=innerWidth;canvas.height=innerHeight;}
-resize(); window.onresize=resize;
+resize(); window.addEventListener("resize", resize);
 
 function confetti(){
-  const pieces=150;
+  const pieces=170;
   const arr=[];
   for(let i=0;i<pieces;i++){
-    arr.push({x:innerWidth/2,y:innerHeight/2,vx:(Math.random()-0.5)*10,vy:-Math.random()*12,g:.2,life:100});
+    arr.push({
+      x:innerWidth/2, y:innerHeight/2,
+      vx:(Math.random()-0.5)*10,
+      vy:-Math.random()*12,
+      g:.2,
+      life:110,
+      hue:Math.random()*360
+    });
   }
   function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     arr.forEach(p=>{
-      p.x+=p.vx;
-      p.y+=p.vy;
-      p.vy+=p.g;
-      p.life--;
-      ctx.fillStyle=`hsl(${Math.random()*360},90%,60%)`;
+      if(p.life<=0) return;
+      p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.life--;
+      ctx.fillStyle=`hsl(${p.hue},90%,60%)`;
       ctx.fillRect(p.x,p.y,6,6);
     });
     if(arr.some(p=>p.life>0)) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
   }
   draw();
 }
